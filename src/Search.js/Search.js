@@ -39,14 +39,14 @@ const Search = ({ onSearchChange }) => {
   return (
     <div>
       <AsyncPaginate
-        placeholder="Search for city"
+        placeholder="Şehir Giriniz"
         debounceTimeout={600}
         value={search}
         onChange={handleOnChange}
         loadOptions={loadOptions}
       />
       <input type="date" value={selectedDate} onChange={handleDateChange} />
-      <Button onClick={handleButtonClick}>Get Prayer Times</Button>
+      <Button onClick={handleButtonClick}>Namaz Saatlerini ara</Button>
     </div>
   );
 };

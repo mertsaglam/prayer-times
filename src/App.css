@@ -1,23 +1,35 @@
 .arc {
+  z-index: 1;
   position: relative;
   width: 300px;
   height: 150px;
-  border: 2px solid ;
+  border: 2px solid;
   border-bottom: none;
   border-radius: 300px 300px 0 0;
   /*  add some gap between elements */
   margin-top: 100px;
-  background: linear-gradient(to bottom, #ffcc00, #ff9900, #ffcc00);
-
-  
+  background: linear-gradient(to bottom, #e6d280, #ff9900, #cf7f0e);
+}
+.night-arc {
+  z-index: 0;
+  position: relative;
+  width: 300px;
+  height: 150px;
+  border: 2px solid;
+  border-bottom: none;
+  border-radius: 0 0 300px 300px;
+  /*  add some gap between elements */
+  background: linear-gradient(to bottom, #9898eb, #000066, #000033);
 }
 
 .sun {
+  z-index: 2;
   position: absolute;
   font-size: 24px;
   transform: translate(-50%, 50%);
 }
 .time-label {
+  z-index: 2;
   position: absolute;
   font-size: 12px;
   transform: translate(-50%, -50%);
@@ -26,7 +38,6 @@
   border-radius: 2px;
   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
 }
-
 
 .Search {
   margin-bottom: 20px;
@@ -59,6 +70,7 @@ p {
 }
 
 .dot {
+  z-index: 2;
   width: 10px;
   height: 10px;
   background-color: red;

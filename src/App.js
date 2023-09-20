@@ -39,6 +39,7 @@ function App() {
   const [time, setTime] = useState(0);
   const timeNames = ["İmsak", "Güneş", "Öğle", "İkindi", "Akşam", "Yatsı"];
   const [currentClockTime, setCurrentClockTime] = useState("");
+  const [compareTime, setCompareTime] = useState(0);
 
   useEffect(() => {
     // Function to update the time displayed by the clock
@@ -65,22 +66,77 @@ function App() {
     // Cleanup function to clear the interval when the component is unmounted
     return () => clearInterval(interval);
   }, [currentMinutes]); // Dependency array includes currentMinutes
+  const initialFetchPrayerTimes = (latitude, longitude, date) => {
+    setIsLoading(true);
+    setError(null);
 
+    // I'm assuming you'll define a URL that works with latitude and longitude.
+    // Make sure to replace this URL with the one suitable for your API.
+    const apiUrl = `https://namaz-vakti.vercel.app/api/timesFromCoordinates?lat=${latitude}&lng=${longitude}&date=${date}&days=3&timezoneOffset=180&calculationMethod=Turkey`;
+
+    fetch(apiUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        setIsLoading(false);
+
+        // Assuming that 'times' is a key in your returned JSON that holds the prayer times.
+        // This is based on your API structure, please adjust as needed.
+        const firstDate = Object.keys(data.times)[0];
+        const timesArray = data.times[firstDate];
+
+        setCurrentTimes(timesArray);
+
+        const timesInMinutes = timesArray.map(timesToMins);
+        setCurrentMinutes(timesInMinutes);
+
+        setLightAmount(timesInMinutes[4] - timesInMinutes[1]);
+
+        // Get current time in minutes
+        const currentTime = new Date();
+        const currentHour = currentTime.getHours();
+        const currentMinute = currentTime.getMinutes();
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+        setCompareTime(currentTimeInMinutes);
+        setTime(currentTimeInMinutes - timesInMinutes[1]);
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        setError(err.toString());
+      });
+  };
+
+
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const date = new Date().toISOString().split("T")[0];
+          initialFetchPrayerTimes(latitude, longitude, date);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    } else {
+      console.error("Geolocation not available in this browser");
+    }
+  }, []);
   const timesToMins = (times) => {
     const [hours, minutes] = times.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
-  const handleOnSearchChange = (searchData,selectedDate) => {
+  const handleOnSearchChange = (searchData, selectedDate) => {
     setIsLoading(true);
     setError(null);
-    const [lat, lng, label,date] = [
+    const [lat, lng, label, date] = [
       searchData.value.latitude,
       searchData.value.longitude,
       searchData.label,
       selectedDate,
     ];
-
 
     fetch(`${URL_WITH_CITY}&region=${label}&city=${label}&date=${date}`)
       .then((response) => response.json())
@@ -93,12 +149,12 @@ function App() {
         setCurrentMinutes(timesInMinutes);
         setLightAmount(timesInMinutes[4] - timesInMinutes[1]);
 
-        // Get current time in minutes
         const currentTime = new Date();
         console.log(currentTime);
         const currentHour = currentTime.getHours();
         const currentMinute = currentTime.getMinutes();
         var currentTimeInMinutes = currentHour * 60 + currentMinute;
+        setCompareTime(currentTimeInMinutes);
         currentTimeInMinutes = currentTimeInMinutes - timesInMinutes[1];
         setTime(currentTimeInMinutes);
       })
@@ -107,6 +163,7 @@ function App() {
         setError(err.toString());
       });
   };
+  
 
   return (
     <div className="App">
@@ -126,7 +183,7 @@ function App() {
               </li>
             ))
           )}
-          <div className="clock">Current time: {currentClockTime}</div>
+          <div className="clock">Saat: {currentClockTime}</div>
 
           <div className="arc">
             {lightAmount && time ? (
@@ -139,7 +196,10 @@ function App() {
                   bottom: `${calculateSunPosition(time, lightAmount).y}px`,
                 }}
               >
-                🌞
+                {compareTime > currentMinutes[4] ||
+                compareTime < currentMinutes[1]
+                  ? "🌙"
+                  : "🌞"}
               </span>
             ) : null}
 
@@ -162,32 +222,33 @@ function App() {
                 );
 
                 return (
-                  <>
-                    {/* Dot */}
+                  <div>
+                    
                     <span
                       key={`dot-${index}`}
                       className="dot"
                       style={{
-                        left: `calc(50% + ${dotX}px - 5px)`, // Offset by half dot size
-                        bottom: `${dotY - 5}px`, // Offset by half dot size
+                        left: `calc(50% + ${dotX}px - 5px)`, 
+                        bottom: `${dotY - 5}px`, 
                       }}
                     ></span>
 
-                    {/* Time Label */}
+                    
                     <span
                       key={`label-${index}`}
                       className="time-label"
                       style={{
-                        left: `calc(50% + ${labelX}px)`,
-                        bottom: `${labelY}px`,
+                        left: `calc(50% + ${labelX - 5}px)`,
+                        bottom: `${labelY - 35}px`,
                       }}
                     >
                       {`${timeNames[index]}: ${currentTimes[index]}`}
                     </span>
-                  </>
+                  </div>
                 );
               })}
           </div>
+          <div className="night-arc"></div>
         </div>
       )}
     </div>
