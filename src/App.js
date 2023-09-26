@@ -3,32 +3,13 @@ import { URL_WITH_CITY } from "./Api";
 import "./App.css";
 import Search from "./Search.js/Search";
 import { useEffect } from "react";
-
-const calculateSunPosition = (currentTime, lightAmount) => {
-  const angle = (currentTime / lightAmount) * 180;
-  const x = 150 * Math.cos((Math.PI / 180) * angle);
-  const y = 150 * Math.sin((Math.PI / 180) * angle);
-  return { x: -x, y }; // Negate the x-coordinate
-};
-
-const calculateTimeLabelPosition = (
-  timeInMinutes,
-  lightAmount,
-  index,
-  radius
-) => {
-  const angle = (timeInMinutes / lightAmount) * 180;
-  let x = radius * Math.cos((Math.PI / 180) * angle);
-  if (index < 3) {
-    x = x;
-  }
-  if (index > 3) {
-    x = x;
-  }
-
-  const y = radius * Math.sin((Math.PI / 180) * angle);
-  return { x: -x, y }; // Negate the x-coordinate
-};
+import {
+  calculateSunPosition,
+  calculateTimeLabelPosition,
+} from "./utils/Utils";
+import ClockComponent from "./Clock/ClockComponent.js";
+import PrayerTimesList from "./PrayerTimes/PrayerTimesList";
+import Popup from "./Popup/Popup";
 
 function App() {
   const [currentTimes, setCurrentTimes] = useState([]);
@@ -40,22 +21,40 @@ function App() {
   const timeNames = ["İmsak", "Güneş", "Öğle", "İkindi", "Akşam", "Yatsı"];
   const [currentClockTime, setCurrentClockTime] = useState("");
   const [compareTime, setCompareTime] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupTimeName, setPopupTimeName] = useState("");
+
+  const updateClockAndSun = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    setCurrentClockTime(`${hours}:${minutes}:${seconds}`);
+
+    // Update sun position
+    const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+    const normalizedTime = currentTimeInMinutes - currentMinutes[1];
+    setTime(normalizedTime);
+    let show = false;
+    let timeName = "";
+    currentMinutes.forEach((timeInMinutes, index) => {
+      const diff = timeInMinutes - compareTime;
+
+      if (diff <= 30 && diff >= 0) {
+        show = true;
+        timeName = timeNames[index];
+      } else {
+        show = false;
+      }
+    });
+
+    setShowPopup(show);
+    setPopupTimeName(timeName);
+  };
 
   useEffect(() => {
     // Function to update the time displayed by the clock
-    const updateClockAndSun = () => {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const seconds = String(now.getSeconds()).padStart(2, "0");
-
-      setCurrentClockTime(`${hours}:${minutes}:${seconds}`);
-
-      // Update sun position
-      const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-      const normalizedTime = currentTimeInMinutes - currentMinutes[1];
-      setTime(normalizedTime);
-    };
 
     // Update the clock and sun position immediately
     updateClockAndSun();
@@ -70,8 +69,6 @@ function App() {
     setIsLoading(true);
     setError(null);
 
-    // I'm assuming you'll define a URL that works with latitude and longitude.
-    // Make sure to replace this URL with the one suitable for your API.
     const apiUrl = `https://namaz-vakti.vercel.app/api/timesFromCoordinates?lat=${latitude}&lng=${longitude}&date=${date}&days=3&timezoneOffset=180&calculationMethod=Turkey`;
 
     fetch(apiUrl)
@@ -79,8 +76,6 @@ function App() {
       .then((data) => {
         setIsLoading(false);
 
-        // Assuming that 'times' is a key in your returned JSON that holds the prayer times.
-        // This is based on your API structure, please adjust as needed.
         const firstDate = Object.keys(data.times)[0];
         const timesArray = data.times[firstDate];
 
@@ -106,7 +101,6 @@ function App() {
       });
   };
 
-
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -131,12 +125,7 @@ function App() {
   const handleOnSearchChange = (searchData, selectedDate) => {
     setIsLoading(true);
     setError(null);
-    const [lat, lng, label, date] = [
-      searchData.value.latitude,
-      searchData.value.longitude,
-      searchData.label,
-      selectedDate,
-    ];
+    const [label, date] = [searchData.label, selectedDate];
 
     fetch(`${URL_WITH_CITY}&region=${label}&city=${label}&date=${date}`)
       .then((response) => response.json())
@@ -150,7 +139,6 @@ function App() {
         setLightAmount(timesInMinutes[4] - timesInMinutes[1]);
 
         const currentTime = new Date();
-        console.log(currentTime);
         const currentHour = currentTime.getHours();
         const currentMinute = currentTime.getMinutes();
         var currentTimeInMinutes = currentHour * 60 + currentMinute;
@@ -163,7 +151,6 @@ function App() {
         setError(err.toString());
       });
   };
-  
 
   return (
     <div className="App">
@@ -183,7 +170,7 @@ function App() {
               </li>
             ))
           )}
-          <div className="clock">Saat: {currentClockTime}</div>
+          <ClockComponent currentClockTime={currentClockTime} />
 
           <div className="arc">
             {lightAmount && time ? (
@@ -223,17 +210,15 @@ function App() {
 
                 return (
                   <div>
-                    
                     <span
                       key={`dot-${index}`}
                       className="dot"
                       style={{
-                        left: `calc(50% + ${dotX}px - 5px)`, 
-                        bottom: `${dotY - 5}px`, 
+                        left: `calc(50% + ${dotX}px - 5px)`,
+                        bottom: `${dotY - 5}px`,
                       }}
                     ></span>
 
-                    
                     <span
                       key={`label-${index}`}
                       className="time-label"
@@ -251,8 +236,8 @@ function App() {
           <div className="night-arc"></div>
         </div>
       )}
+      <Popup popupTimeName={popupTimeName} showPopup={showPopup} />
     </div>
   );
 }
-
 export default App;
